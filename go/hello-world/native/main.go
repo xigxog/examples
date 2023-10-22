@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	fmt.Printf("starting http server on '%s'...\n", addr)
-	http.HandleFunc("/hello", getHello)
+	http.HandleFunc("/examples/hello-world", hello)
 	err := http.ListenAndServe(addr, nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Println("server closed")
@@ -33,7 +33,7 @@ func main() {
 	}
 }
 
-func getHello(w http.ResponseWriter, r *http.Request) {
+func hello(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("👋 Hello %s!", who)
 	fmt.Println(msg)
 
