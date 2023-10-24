@@ -224,7 +224,7 @@ to use and the environment to inject. These can be passed as headers or query
 parameters.
 
 ```shell
-curl http://127.0.0.1:8081/hello?kf-dep=deployment-a&kf-env=world
+curl "http://127.0.0.1:8082/hello?kf-dep=deployment-a&kf-env=world"
 
 # Example output:
 #👋 Hello World!
@@ -235,8 +235,25 @@ there is no need to create another deployment to switch environments, simply
 change the query parameter!
 
 ```shell
-curl http://127.0.0.1:8081/examples/hello-world?kf-dep=deployment-a&kf-env=universe
+curl "http://127.0.0.1:8082/hello?kf-dep=deployment-a&kf-env=universe"
 
 # Example output:
 #👋 Hello Universe!
+```
+
+Now let's release the app so we don't have to specify all those details in the
+request. It is important to understand that Fox works against the active state
+of the Git repo. To deploy or release a different version of your app simply
+checkout the tag, branch, or commit you want and let Fox do the rest.
+
+```shell
+fox release dev --env world --wait 5m
+```
+
+Try the same request from above, but this time don't specify the context. Since
+the app has been released the request will get matched by the component's route
+and the environment will be automatically injected by KubeFox.
+
+```shell
+curl "http://localhost:8082/hello"
 ```
