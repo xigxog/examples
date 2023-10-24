@@ -1,4 +1,4 @@
-module kubefox/hello-world/frontend
+module github.com/xigxog/kubefox/examples/go/hello-world/kubefox/components/frontend
 
 go 1.21
 

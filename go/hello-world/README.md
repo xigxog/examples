@@ -13,9 +13,9 @@ To get started you'll need the following installed:
 - [Docker](https://docs.docker.com/engine/install/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-Also you'll need access to a Kubernetes cluster. If you'd like to
-run a Kubernetes cluster on your workstation for testing we recommend using
-[kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/docs/user/quick-start/).
+You'll also need access to a Kubernetes cluster. If you'd like to run a
+Kubernetes cluster on your workstation for testing we recommend using [kind
+(Kubernetes in Docker)](https://kind.sigs.k8s.io/docs/user/quick-start/).
 
 ## Native
 
@@ -75,7 +75,7 @@ kubectl apply --namespace hello-world --filename hack/deployments/
 # service/hello-world-frontend created
 ```
 
-If everything worked you should see the Pod running. You can check using
+If everything worked you should see two Pods running. You can check using
 kubectl.
 
 ```shell
@@ -207,7 +207,7 @@ your Kubernetes cluster.
 fox publish deployment-a --wait 5m
 ```
 
-Now you can test the KubeFox app. To keep things simple you'll again port
+You can now try testing the KubeFox app. To keep things simple you'll again port
 forward, but this time you'll connect to the KubeFox broker with some help from
 `fox`. Open up a new terminal and run the following to start the port forward.
 This will open the port `8082` on your workstation which will forward requests
@@ -219,9 +219,9 @@ fox proxy 8082
 
 When KubeFox deploys an app it starts the components but will not automatically
 send requests to it until it is released. But you can still test deployments by
-providing some context. KubeFox needs two pieces of information, the deployment
-to use and the environment to inject. These can be passed as headers or query
-parameters.
+manually providing some context. KubeFox needs two pieces of information, the
+deployment to use and the environment to inject. These can be passed as headers
+or query parameters.
 
 ```shell
 curl "http://127.0.0.1:8082/hello?kf-dep=deployment-a&kf-env=world"

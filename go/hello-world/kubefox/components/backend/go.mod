@@ -1,4 +1,4 @@
-module kubefox/hello-world/backend
+module github.com/xigxog/kubefox/examples/go/hello-world/kubefox/components/backend
 
 go 1.21
 
