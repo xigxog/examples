@@ -1,15 +1,19 @@
 # Hello World
 
-In this example we'll compare two simple `hello-world` apps. The first is a
-"native" Kubernetes app using an HTTP server, Dockerfile, and various Kubernetes
+In this example we'll compare two simple `hello-world` apps that read the
+environment variable `HELLO_WORLD_WHO` and say hello to them. The first is a
+"native" Kubernetes app using HTTP servers, Dockerfile, and various Kubernetes
 resources. The second is a KubeFox component which will be deployed using
 [fox](https://github.com/xigxog/fox), the KubeFox CLI.
 
-To get started you'll need [Go](https://go.dev/doc/install),
-[Git](https://github.com/git-guides/install-git),
-[Docker](https://docs.docker.com/engine/install/), and
-[kubectl](https://kubernetes.io/docs/tasks/tools/) installed on your
-workstation. Also you'll need access to a Kubernetes cluster. If you'd like to
+To get started you'll need the following installed:
+
+- [Go](https://go.dev/doc/install)
+- [Git](https://github.com/git-guides/install-git)
+- [Docker](https://docs.docker.com/engine/install/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+Also you'll need access to a Kubernetes cluster. If you'd like to
 run a Kubernetes cluster on your workstation for testing we recommend using
 [kind (Kubernetes in Docker)](https://kind.sigs.k8s.io/docs/user/quick-start/).
 
@@ -27,27 +31,31 @@ Take a look at the various files, there is a lot going on.
 There are a few steps to deploy the app to Kubernetes. Run all the following
 commands from the `native` directory.
 
-First, build the app container image using Docker. If you are using kind locally
-you can leave the container registry set to localhost, otherwise replace it with
-the container registry you'd like to use.
+First, build the app container images using Docker. If you are using kind
+locally you can leave the container registry set to localhost, otherwise replace
+it with the container registry you'd like to use.
 
 ```shell
 export CONTAINER_REGISTRY="localhost"
-docker buildx build . -t "$CONTAINER_REGISTRY/hello-world:v0.1.0"
+docker buildx build ./backend --file Dockerfile --tag "$CONTAINER_REGISTRY/hello-world-backend:main"
+docker buildx build ./frontend --file Dockerfile --tag "$CONTAINER_REGISTRY/hello-world-frontend:main"
 ```
 
-Next you'll need to make the container image available to Kubernetes. If you are
-using kind you can load the image directly without using a container registry.
+Next you'll need to make the container images available to Kubernetes. If you
+are using kind you can load the image directly without using a container
+registry.
 
 ```shell
 export KIND_CLUSTER="kind"
-kind load docker-image --name "$KIND_CLUSTER" "$CONTAINER_REGISTRY/hello-world:v0.1.0"
+kind load docker-image --name "$KIND_CLUSTER" "$CONTAINER_REGISTRY/hello-world-backend:main"
+kind load docker-image --name "$KIND_CLUSTER" "$CONTAINER_REGISTRY/hello-world-frontend:main"
 ```
 
 Otherwise push the image to the container registry.
 
 ```shell
-docker push "$CONTAINER_REGISTRY/hello-world:v0.1.0"
+docker push "$CONTAINER_REGISTRY/hello-world-backend:main"
+docker push "$CONTAINER_REGISTRY/hello-world-frontend:main"
 ```
 
 Finally, create a Kubernetes Namespace and apply the ConigMaps and Deployment to
@@ -55,7 +63,16 @@ run the app on Kubernetes.
 
 ```shell
 kubectl create namespace hello-world
-kubectl apply --namespace hello-world --filename resources/
+kubectl apply --namespace hello-world --filename hack/environments/world.yaml
+kubectl apply --namespace hello-world --filename hack/deployments/
+
+# Example output:
+# namespace/hello-world created
+# configmap/env created
+# deployment.apps/hello-world-backend created
+# service/hello-world-backend created
+# deployment.apps/hello-world-frontend created
+# service/hello-world-frontend created
 ```
 
 If everything worked you should see the Pod running. You can check using
@@ -65,11 +82,12 @@ kubectl.
 kubectl get pods --namespace hello-world
 
 # Example output:
-# NAME                         READY   STATUS    RESTARTS      AGE
-# hello-world-7fcdb5bd-79hxk   1/1     Running   0             21s
+# NAME                                    READY   STATUS    RESTARTS   AGE
+# hello-world-backend-865d6697d5-2vwnw    1/1     Running   0          10s
+# hello-world-frontend-5579b569c9-fdsnw   1/1     Running   0          19s
 ```
 
-Now let's test the app. To keep things simple you'll port forward to the Pod to
+Time to test the app. To keep things simple you'll port forward to the Pod to
 access its HTTP server. Open up a new terminal and run the following to start
 the port forward. This will open the port `8080` on your workstation which will
 forward all traffic to the Pod.
@@ -85,23 +103,75 @@ kubectl port-forward --namespace hello-world service/hello-world 8080:http
 Finally send a HTTP request to the app.
 
 ```shell
-curl http://127.0.0.1:8080/examples/hello-world
+curl http://127.0.0.1:8080/hello
 
 # Example output:
 #👋 Hello World!
 ```
 
-Phew, it works!
+It works! But how do you run the app in a different environment so you can
+change who to say hello to? You need to update the ConfigMap `env` that contains
+the `HELLO_WORLD_WHO` variable. Of course if you change what is running now the
+`world` environment will no longer exist. Instead you can create a new Namespace
+and run the app there with the updated ConfigMap. Try it out.
 
-> TODO: deploy to `universe` environment
+```shell
+kubectl create namespace hello-universe
+kubectl apply --namespace hello-universe --filename hack/environments/universe.yaml
+kubectl apply --namespace hello-universe --filename hack/deployments/
+
+# Example output:
+# namespace/hello-universe created
+# configmap/env created
+# deployment.apps/hello-world-backend created
+# service/hello-world-backend created
+# deployment.apps/hello-world-frontend created
+# service/hello-world-frontend created
+```
+
+Now you can test the app in the new environment. Once again open up a new
+terminal and run the following to start the port forward but use port `8081`
+this time.
+
+```shell
+kubectl port-forward --namespace hello-universe service/hello-world 8081:http
+
+# Example output:
+# Forwarding from 127.0.0.1:8081 -> 3333
+# Forwarding from [::1]:8081 -> 3333
+```
+
+Then send a HTTP request to app.
+
+```shell
+curl http://127.0.0.1:8081/hello
+
+# Example output:
+#👋 Hello Universe!
+```
+
+Great! It's using the new environment. Take a look at what is running on
+Kubernetes now. You can use a label from the Deployments to show Pods from
+multiple namespaces.
+
+```shell
+kubectl get pods --all-namespaces --selector=app.kubernetes.io/name=hello-world-native
+
+# Example output:
+# NAMESPACE        NAME                                            READY   STATUS    RESTARTS   AGE
+# hello-universe   hello-world-backend-9f67b958d-lwm6t             1/1     Running   0          2m30s
+# hello-universe   hello-world-frontend-887674586-2q298            1/1     Running   0          2m25s
+# hello-world      hello-world-backend-865d6697d5-tpbfr            1/1     Running   0          3m49s
+# hello-world      hello-world-frontend-5579b569c9-fdsnw           1/1     Running   0          5m10s
+```
 
 ## KubeFox
 
 If this is your first time using KubeFox you'll need to install and setup
 [fox](https://github.com/xigxog/fox) CLI tool. The easiest way is to use `go
-install`, just make sure that `$GOPATH/bin` directory is on your path. Or you
-can download it from the [release page](https://github.com/xigxog/fox/releases).
-The `config setup` command will guide you through the setup process
+install`, make sure that `$GOPATH/bin` directory is on your path. Or you can
+download it from the [release page](https://github.com/xigxog/fox/releases). The
+`config setup` command will guide you through the setup process
 
 ```shell
 export PATH=$PATH:$GOPATH/bin
@@ -114,28 +184,58 @@ fox config setup
 You'll need to run the following commands from the `kubefox` directory.
 
 ```shell
-fox publish my-deployment --wait 5m
+cd ../kubefox/
 ```
 
-Now let's test the KubeFox app. To keep things simple you'll again port forward,
-but this time you'll connect to the KubeFox broker with some help from `fox`.
-Open up a new terminal and run the following to start the port forward. This
-will open the port `8081` on your workstation which will forward all traffic to
-the broker.
+First, apply the KubeFox Environment resources. Environments are similar to
+ConfigMaps but are cluster scoped so they can be used by multiple Namespaces as
+the same time.
 
 ```shell
-fox proxy 8081
+kubectl apply --filename hack/environments/
+
+# Example output:
+# environment.kubefox.xigxog.io/universe created
+# environment.kubefox.xigxog.io/world created
 ```
 
+Now you can `publish` the app using `fox`. This will build the container images,
+push them to the registry, and deploy the app to the KubeFox platform running on
+your Kubernetes cluster.
+
 ```shell
-curl http://127.0.0.1:8081/examples/hello-world?kf-dep=my-deployment&kf-env=env-world
+fox publish deployment-a --wait 5m
+```
+
+Now you can test the KubeFox app. To keep things simple you'll again port
+forward, but this time you'll connect to the KubeFox broker with some help from
+`fox`. Open up a new terminal and run the following to start the port forward.
+This will open the port `8082` on your workstation which will forward traffic to
+the KubeFox platform.
+
+```shell
+fox proxy 8082
+```
+
+When KubeFox deploys an app it starts the components but will not automatically
+send requests to it until it is released. But you can still test deployments by
+providing some context. KubeFox needs two pieces of information, the deployment
+to use and the environment to inject. These can be passed as headers or query
+parameters.
+
+```shell
+curl http://127.0.0.1:8081/hello?kf-dep=deployment-a&kf-env=world
 
 # Example output:
 #👋 Hello World!
 ```
 
+Next try switching to the `universe` environment created earlier. With KubeFox
+there is no need to create another deployment to switch environments, simply
+change the query parameter!
+
 ```shell
-curl http://127.0.0.1:8081/examples/hello-world?kf-dep=my-deployment&kf-env=env-universe
+curl http://127.0.0.1:8081/examples/hello-world?kf-dep=deployment-a&kf-env=universe
 
 # Example output:
 #👋 Hello Universe!

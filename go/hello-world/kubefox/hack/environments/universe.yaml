@@ -1,7 +1,7 @@
 apiVersion: kubefox.xigxog.io/v1alpha1
 kind: Environment
 metadata:
-  name: env-world
+  name: universe
 spec:
   vars:
-    HELLO_WORLD_WHO: World
+    HELLO_WORLD_WHO: Universe
