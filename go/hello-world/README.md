@@ -58,8 +58,8 @@ docker push "$CONTAINER_REGISTRY/hello-world-backend:main"
 docker push "$CONTAINER_REGISTRY/hello-world-frontend:main"
 ```
 
-Finally, create a Kubernetes Namespace and apply the ConigMaps and Deployment to
-run the app on Kubernetes.
+Finally, create a Kubernetes Namespace and apply the ConfigMaps and Deployment
+to run the app on Kubernetes.
 
 ```shell
 kubectl create namespace hello-world
@@ -90,7 +90,7 @@ kubectl get pods --namespace hello-world
 Time to test the app. To keep things simple you'll port forward to the Pod to
 access its HTTP server. Open up a new terminal and run the following to start
 the port forward. This will open the port `8080` on your workstation which will
-forward all traffic to the Pod.
+forward requests to the Pod.
 
 ```shell
 kubectl port-forward --namespace hello-world service/hello-world 8080:http
@@ -174,9 +174,9 @@ download it from the [release page](https://github.com/xigxog/fox/releases). The
 `config setup` command will guide you through the setup process
 
 ```shell
-export PATH=$PATH:$GOPATH/bin
 # This enables some extra output.
 export FOX_INFO=true
+export PATH=$PATH:$GOPATH/bin
 go install github.com/xigxog/fox@latest
 fox config setup
 ```
@@ -210,8 +210,8 @@ fox publish deployment-a --wait 5m
 Now you can test the KubeFox app. To keep things simple you'll again port
 forward, but this time you'll connect to the KubeFox broker with some help from
 `fox`. Open up a new terminal and run the following to start the port forward.
-This will open the port `8082` on your workstation which will forward traffic to
-the KubeFox platform.
+This will open the port `8082` on your workstation which will forward requests
+to the KubeFox platform.
 
 ```shell
 fox proxy 8082
@@ -257,3 +257,19 @@ and the environment will be automatically injected by KubeFox.
 ```shell
 curl "http://localhost:8082/hello"
 ```
+
+Take a look at what is running on Kubernetes to support the KubeFox app.
+
+```shell
+kubectl get pods --all-namespaces --selector=app.kubernetes.io/name=hello-world-kubefox
+
+# Example output:
+# NAMESPACE     NAME                                                    READY   STATUS    RESTARTS   AGE
+# kubefox-dev   hello-world-kubefox-backend-1403140-56d896767d-2r88l    1/1     Running   0          49s
+# kubefox-dev   hello-world-kubefox-frontend-1403140-5bb7bd679b-7wp27   1/1     Running   0          48s
+```
+
+Notice that even though we have made a deployment, a release, and have two
+environments there are still only two Pods running! This is possible because
+KubeFox injects context at request time instead of deploy time. Adding
+environments has nearly no overhead!
