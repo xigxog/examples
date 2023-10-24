@@ -14,7 +14,7 @@ var (
 )
 
 func main() {
-	who = os.Getenv("HELLO_WORLD_WHO")
+	who = os.Getenv("who")
 	if who == "" {
 		who = "World"
 	}

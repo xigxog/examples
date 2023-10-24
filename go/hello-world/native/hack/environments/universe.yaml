@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: env
 data:
-  HELLO_WORLD_WHO: Universe
+  who: Universe

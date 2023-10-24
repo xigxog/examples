@@ -1,7 +1,7 @@
 # Hello World
 
 In this example we'll compare two simple `hello-world` apps that read the
-environment variable `HELLO_WORLD_WHO` and say hello to them. The first is a
+environment variable `who` and say hello to them. The first is a
 "native" Kubernetes app using HTTP servers, Dockerfile, and various Kubernetes
 resources. The second is a KubeFox component which will be deployed using
 [fox](https://github.com/xigxog/fox), the KubeFox CLI.
@@ -22,9 +22,9 @@ Kubernetes cluster on your workstation for testing we recommend using [kind
 We have included everything needed to run the app in Kubernetes. This includes:
 
 - Dockerfile to build and package the app into an OCI container.
-- Kubernetes Deployment to run the app on the Kubernetes cluster.
+- Kubernetes Deployments to run the app on the Kubernetes cluster.
 - Kubernetes ConfigMap to store environment variables used by the app.
-- Kubernetes Service to be able to send requests to the Pod.
+- Kubernetes Service to be able to send requests to the pod.
 
 Take a look at the various files, there is a lot going on.
 
@@ -58,7 +58,7 @@ docker push "$CONTAINER_REGISTRY/hello-world-backend:main"
 docker push "$CONTAINER_REGISTRY/hello-world-frontend:main"
 ```
 
-Finally, create a Kubernetes Namespace and apply the ConfigMaps and Deployment
+Finally, create a Kubernetes namespace and apply the ConfigMaps and Deployment
 to run the app on Kubernetes.
 
 ```shell
@@ -75,7 +75,7 @@ kubectl apply --namespace hello-world --filename hack/deployments/
 # service/hello-world-frontend created
 ```
 
-If everything worked you should see two Pods running. You can check using
+If everything worked you should see two pods running. You can check using
 kubectl.
 
 ```shell
@@ -87,10 +87,10 @@ kubectl get pods --namespace hello-world
 # hello-world-frontend-5579b569c9-fdsnw   1/1     Running   0          19s
 ```
 
-Time to test the app. To keep things simple you'll port forward to the Pod to
+Time to test the app. To keep things simple you'll port forward to the pod to
 access its HTTP server. Open up a new terminal and run the following to start
 the port forward. This will open the port `8080` on your workstation which will
-forward requests to the Pod.
+forward requests to the pod.
 
 ```shell
 kubectl port-forward --namespace hello-world service/hello-world 8080:http
@@ -111,9 +111,9 @@ curl http://127.0.0.1:8080/hello
 
 It works! But how do you run the app in a different environment so you can
 change who to say hello to? You need to update the ConfigMap `env` that contains
-the `HELLO_WORLD_WHO` variable. Of course if you change what is running now the
-`world` environment will no longer exist. Instead you can create a new Namespace
-and run the app there with the updated ConfigMap. Try it out.
+the `who` variable. Of course if you change what is running now the `world`
+environment will no longer exist. Instead you can create a new namespace and run
+the app there with the updated ConfigMap. Try it out.
 
 ```shell
 kubectl create namespace hello-universe
@@ -151,7 +151,7 @@ curl http://127.0.0.1:8081/hello
 ```
 
 Great! It's using the new environment. Take a look at what is running on
-Kubernetes now. You can use a label from the Deployments to show Pods from
+Kubernetes now. You can use a label from the Deployments to show pods from
 multiple namespaces.
 
 ```shell
@@ -187,8 +187,8 @@ You'll need to run the following commands from the `kubefox` directory.
 cd ../kubefox/
 ```
 
-First, apply the KubeFox Environment resources. Environments are similar to
-ConfigMaps but are cluster scoped so they can be used by multiple Namespaces as
+First, apply the KubeFox environment resources. Environments are similar to
+ConfigMaps but are cluster scoped so they can be used by multiple namespaces as
 the same time.
 
 ```shell
@@ -221,10 +221,18 @@ When KubeFox deploys an app it starts the components but will not automatically
 send requests to it until it is released. But you can still test deployments by
 manually providing some context. KubeFox needs two pieces of information, the
 deployment to use and the environment to inject. These can be passed as headers
-or query parameters.
+or query parameters. Note the path changes in the requests. The `subPath`
+variable is used to ensure unique routes between environments. You can see how
+it used in the `frontend` component's `main.go` line 12.
+
+```go
+k.Route("Path(`/{{.Env.subPath}}/hello`)", sayHello)
+```
+
+Try testing things out.
 
 ```shell
-curl "http://127.0.0.1:8082/hello?kf-dep=deployment-a&kf-env=world"
+curl "http://127.0.0.1:8082/small/hello?kf-dep=deployment-a&kf-env=world"
 
 # Example output:
 #👋 Hello World!
@@ -235,7 +243,7 @@ there is no need to create another deployment to switch environments, simply
 change the query parameter!
 
 ```shell
-curl "http://127.0.0.1:8082/hello?kf-dep=deployment-a&kf-env=universe"
+curl "http://127.0.0.1:8082/big/hello?kf-dep=deployment-a&kf-env=universe"
 
 # Example output:
 #👋 Hello Universe!
@@ -255,7 +263,7 @@ the app has been released the request will get matched by the component's route
 and the environment will be automatically injected by KubeFox.
 
 ```shell
-curl "http://localhost:8082/hello"
+curl "http://localhost:8082/small/hello"
 ```
 
 Take a look at what is running on Kubernetes to support the KubeFox app.
@@ -270,6 +278,6 @@ kubectl get pods --all-namespaces --selector=app.kubernetes.io/name=hello-world-
 ```
 
 Notice that even though we have made a deployment, a release, and have two
-environments there are still only two Pods running! This is possible because
-KubeFox injects context at request time instead of deploy time. Adding
+environments there are still only two pods running! This is possible because
+KubeFox injects context at request time instead of at deployment. Adding
 environments has nearly no overhead!
