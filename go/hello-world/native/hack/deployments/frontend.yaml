@@ -18,6 +18,9 @@ spec:
           image: localhost/hello-world-frontend:main
           args:
             - -addr=0.0.0.0:3333
+          envFrom:
+            - configMapRef:
+                name: env
           ports:
             - containerPort: 3333
               name: http

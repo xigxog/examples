@@ -62,9 +62,9 @@ Finally, create a Kubernetes namespace and apply the ConfigMaps and Deployment
 to run the app on Kubernetes.
 
 ```shell
-kubectl create namespace hello-world
-kubectl apply --namespace hello-world --filename hack/environments/world.yaml
-kubectl apply --namespace hello-world --filename hack/deployments/
+kubectl create namespace hello-world-qa
+kubectl apply --namespace hello-world-qa --filename hack/environments/qa.yaml
+kubectl apply --namespace hello-world-qa --filename hack/deployments/
 
 # Example output:
 # namespace/hello-world created
@@ -79,7 +79,7 @@ If everything worked you should see two pods running. You can check using
 kubectl.
 
 ```shell
-kubectl get pods --namespace hello-world
+kubectl get pods --namespace hello-world-qa
 
 # Example output:
 # NAME                                    READY   STATUS    RESTARTS   AGE
@@ -89,21 +89,21 @@ kubectl get pods --namespace hello-world
 
 Time to test the app. To keep things simple you'll port forward to the pod to
 access its HTTP server. Open up a new terminal and run the following to start
-the port forward. This will open the port `8080` on your workstation which will
+the port forward. This will open the port `8888` on your workstation which will
 forward requests to the pod.
 
 ```shell
-kubectl port-forward --namespace hello-world service/hello-world 8080:http
+kubectl port-forward --namespace hello-world-qa service/hello-world-frontend 8888:http
 
 # Example output:
-# Forwarding from 127.0.0.1:8080 -> 3333
-# Forwarding from [::1]:8080 -> 3333
+# Forwarding from 127.0.0.1:8888 -> 3333
+# Forwarding from [::1]:8888 -> 3333
 ```
 
 Finally send a HTTP request to the app.
 
 ```shell
-curl http://127.0.0.1:8080/hello
+curl http://127.0.0.1:8888/qa/hello
 
 # Example output:
 #👋 Hello World!
@@ -116,12 +116,12 @@ environment will no longer exist. Instead you can create a new namespace and run
 the app there with the updated ConfigMap. Try it out.
 
 ```shell
-kubectl create namespace hello-universe
-kubectl apply --namespace hello-universe --filename hack/environments/universe.yaml
-kubectl apply --namespace hello-universe --filename hack/deployments/
+kubectl create namespace hello-world-prod
+kubectl apply --namespace hello-world-prod --filename hack/environments/prod.yaml
+kubectl apply --namespace hello-world-prod --filename hack/deployments/
 
 # Example output:
-# namespace/hello-universe created
+# namespace/hello-world-prod created
 # configmap/env created
 # deployment.apps/hello-world-backend created
 # service/hello-world-backend created
@@ -130,21 +130,21 @@ kubectl apply --namespace hello-universe --filename hack/deployments/
 ```
 
 Now you can test the app in the new environment. Once again open up a new
-terminal and run the following to start the port forward but use port `8081`
+terminal and run the following to start the port forward but use port `8889`
 this time.
 
 ```shell
-kubectl port-forward --namespace hello-universe service/hello-world 8081:http
+kubectl port-forward --namespace hello-world-prod service/hello-world-frontend 8889:http
 
 # Example output:
-# Forwarding from 127.0.0.1:8081 -> 3333
-# Forwarding from [::1]:8081 -> 3333
+# Forwarding from 127.0.0.1:8889 -> 3333
+# Forwarding from [::1]:8889 -> 3333
 ```
 
 Then send a HTTP request to app.
 
 ```shell
-curl http://127.0.0.1:8081/hello
+curl http://127.0.0.1:8889/hello
 
 # Example output:
 #👋 Hello Universe!
@@ -158,11 +158,11 @@ multiple namespaces.
 kubectl get pods --all-namespaces --selector=app.kubernetes.io/name=hello-world-native
 
 # Example output:
-# NAMESPACE        NAME                                            READY   STATUS    RESTARTS   AGE
-# hello-universe   hello-world-backend-9f67b958d-lwm6t             1/1     Running   0          2m30s
-# hello-universe   hello-world-frontend-887674586-2q298            1/1     Running   0          2m25s
-# hello-world      hello-world-backend-865d6697d5-tpbfr            1/1     Running   0          3m49s
-# hello-world      hello-world-frontend-5579b569c9-fdsnw           1/1     Running   0          5m10s
+# NAMESPACE          NAME                                            READY   STATUS    RESTARTS   AGE
+# hello-world-prod   hello-world-backend-9f67b958d-lwm6t             1/1     Running   0          2m30s
+# hello-world-prod   hello-world-frontend-887674586-2q298            1/1     Running   0          2m25s
+# hello-world-qa     hello-world-backend-865d6697d5-tpbfr            1/1     Running   0          3m49s
+# hello-world-qa     hello-world-frontend-5579b569c9-fdsnw           1/1     Running   0          5m10s
 ```
 
 ## KubeFox
@@ -195,8 +195,8 @@ the same time.
 kubectl apply --filename hack/environments/
 
 # Example output:
-# environment.kubefox.xigxog.io/universe created
-# environment.kubefox.xigxog.io/world created
+# environment.kubefox.xigxog.io/prod created
+# environment.kubefox.xigxog.io/qa created
 ```
 
 Now you can `publish` the app using `fox`. This will build the container images,
@@ -204,17 +204,17 @@ push them to the registry, and deploy the app to the KubeFox platform running on
 your Kubernetes cluster.
 
 ```shell
-fox publish deployment-a --wait 5m
+fox publish alpha --wait 5m
 ```
 
 You can now try testing the KubeFox app. To keep things simple you'll again port
 forward, but this time you'll connect to the KubeFox broker with some help from
 `fox`. Open up a new terminal and run the following to start the port forward.
-This will open the port `8082` on your workstation which will forward requests
+This will open the port `8080` on your workstation which will forward requests
 to the KubeFox platform.
 
 ```shell
-fox proxy 8082
+fox proxy 8080
 ```
 
 When KubeFox deploys an app it starts the components but will not automatically
@@ -232,18 +232,18 @@ k.Route("Path(`/{{.Env.subPath}}/hello`)", sayHello)
 Try testing things out.
 
 ```shell
-curl "http://127.0.0.1:8082/small/hello?kf-dep=deployment-a&kf-env=world"
+curl "http://127.0.0.1:8080/qa/hello?kf-dep=alpha&kf-env=qa"
 
 # Example output:
 #👋 Hello World!
 ```
 
-Next try switching to the `universe` environment created earlier. With KubeFox
+Next try switching to the `prod` environment created earlier. With KubeFox
 there is no need to create another deployment to switch environments, simply
 change the query parameter!
 
 ```shell
-curl "http://127.0.0.1:8082/big/hello?kf-dep=deployment-a&kf-env=universe"
+curl "http://127.0.0.1:8080/prod/hello?kf-dep=alpha&kf-env=prod"
 
 # Example output:
 #👋 Hello Universe!
@@ -255,7 +255,7 @@ of the Git repo. To deploy or release a different version of your app simply
 checkout the tag, branch, or commit you want and let Fox do the rest.
 
 ```shell
-fox release dev --env world --wait 5m
+fox release dev --env qa --wait 5m
 ```
 
 Try the same request from above, but this time don't specify the context. Since
@@ -263,7 +263,10 @@ the app has been released the request will get matched by the component's route
 and the environment will be automatically injected by KubeFox.
 
 ```shell
-curl "http://localhost:8082/small/hello"
+curl "http://localhost:8080/qa/hello"
+
+# Example output:
+#👋 Hello World!
 ```
 
 Take a look at what is running on Kubernetes to support the KubeFox app.
@@ -272,9 +275,9 @@ Take a look at what is running on Kubernetes to support the KubeFox app.
 kubectl get pods --all-namespaces --selector=app.kubernetes.io/name=hello-world-kubefox
 
 # Example output:
-# NAMESPACE     NAME                                                    READY   STATUS    RESTARTS   AGE
-# kubefox-dev   hello-world-kubefox-backend-1403140-56d896767d-2r88l    1/1     Running   0          49s
-# kubefox-dev   hello-world-kubefox-frontend-1403140-5bb7bd679b-7wp27   1/1     Running   0          48s
+# NAMESPACE      NAME                                                    READY   STATUS    RESTARTS   AGE
+# kubefox-demo   hello-world-kubefox-backend-1403140-56d896767d-2r88l    1/1     Running   0          49s
+# kubefox-demo   hello-world-kubefox-frontend-1403140-5bb7bd679b-7wp27   1/1     Running   0          48s
 ```
 
 Notice that even though we have made a deployment, a release, and have two

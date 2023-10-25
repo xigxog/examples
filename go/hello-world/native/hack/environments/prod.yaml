@@ -3,4 +3,5 @@ kind: ConfigMap
 metadata:
   name: env
 data:
+  subPath: prod
   who: Universe

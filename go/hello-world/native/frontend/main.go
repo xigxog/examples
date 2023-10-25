@@ -19,9 +19,15 @@ func main() {
 	flag.StringVar(&addr, "addr", "127.0.0.1:3333", "address http server should bind to")
 	flag.Parse()
 
-	http.HandleFunc("/hello", sayHello)
+	subPath := os.Getenv("subPath")
+	if subPath == "" {
+		subPath = "unknown"
+	}
+	path := fmt.Sprintf("/%s/hello", subPath)
 
-	fmt.Printf("starting http server on '%s'...\n", addr)
+	fmt.Printf("starting http server on '%s' for path '%s'...\n", addr, path)
+
+	http.HandleFunc(path, sayHello)
 	err := http.ListenAndServe(addr, nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		fmt.Println("server closed")
