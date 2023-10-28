@@ -20,7 +20,7 @@ func sayHello(k kit.Kontext) error {
 	}
 
 	msg := fmt.Sprintf("👋 Hello %s!", r.Str())
-	k.Log().Info(msg)
+	k.Log().Debug(msg)
 
 	a := strings.ToLower(k.Header("accept"))
 	switch {
