@@ -1,8 +1,0 @@
-go 1.21
-
-use (
-	./kubefox/components/backend
-	./kubefox/components/frontend
-	./native/backend
-	./native/frontend
-)

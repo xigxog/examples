@@ -1,5 +1,0 @@
-__debug_bin*
-*.ignore.*
-*.test
-go.work.sum
-workstation/

@@ -1,14 +1,13 @@
 ## Build time
 FROM golang:1.21 as builder
 
+ENV CGO_ENABLED=0
+ENV GO111MODULE=off
+
 WORKDIR /app
 
-# Cache dependencies.
-COPY go.mod .
-RUN go mod download
-
 COPY ./ .
-RUN CGO_ENABLED=0 go build -o http-srv
+RUN go build -o http-srv
 
 ## Runtime
 FROM alpine
